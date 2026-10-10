@@ -12,6 +12,11 @@
       "name": "DISCORD_GUILD_ID",
       "description": "Optional. Discord server (guild) ID the bot answers in. Leave empty to answer in every server it is invited to.",
       "requiredAtBoot": false
+    },
+    {
+      "name": "POLLINATIONS_TOKEN",
+      "description": "Optional. Free token from pollinations.ai that lifts the image API's anonymous rate limit. Without it, image creation often fails with 402.",
+      "requiredAtBoot": false
     }
   ]
 }

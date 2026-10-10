@@ -27,6 +27,8 @@ services:
       - OLLAMA_HOST=http://ollama:11434
       - LLM_NUM_THREADS=4
       - BASE44_PREVIEW_MODE
+    env_file:
+      - /run/base44/app.env
     ports:
       - "3000:8000"
     depends_on:

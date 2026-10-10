@@ -1,7 +1,8 @@
 """
 Lớp dùng chung cho Gemma 3 4B qua Ollama — dùng cho cả web (app.py) và bot Discord.
 
-Cùng model, cùng prompt hệ thống và cùng hai chế độ: chat và mô tả ảnh.
+Cùng model, cùng prompt hệ thống và cùng các chế độ: chat, đọc ảnh/tệp, tạo tệp.
+(Tạo ảnh dùng `imagegen.py` vì Gemma 3 không tự vẽ được ảnh.)
 """
 
 import os
@@ -10,7 +11,14 @@ MODEL = "gemma3:4b"
 
 SYSTEM_PROMPT = (
     "Bạn là một trợ lý AI hữu ích, thân thiện. "
-    "Luôn trả lời bằng tiếng Việt một cách tự nhiên, rõ ràng."
+    "Luôn trả lời bằng tiếng Việt một cách tự nhiên, rõ ràng.\n"
+    "Bạn đọc được ảnh và tệp mà người dùng gửi kèm.\n"
+    "Khi người dùng yêu cầu tạo tệp, hãy đặt toàn bộ nội dung tệp trong một khối mã "
+    "có tên tệp ngay sau ```file:, ví dụ:\n"
+    "```file:ghichu.txt\n"
+    "Nội dung tệp ở đây.\n"
+    "```\n"
+    "Bạn không tự vẽ được ảnh, đừng bịa ra ảnh."
 )
 
 DEFAULT_IMAGE_PROMPT = "Mô tả ảnh này bằng tiếng Việt."
