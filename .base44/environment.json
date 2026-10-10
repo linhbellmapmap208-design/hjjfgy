@@ -2,5 +2,16 @@
   "previewPort": 3000,
   "healthPath": "/health",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "secrets": [
+    {
+      "name": "DISCORD_BOT_TOKEN",
+      "description": "Discord bot token. Discord Developer Portal → your application → Bot → Reset Token, then copy it.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "DISCORD_GUILD_ID",
+      "description": "Optional. Discord server (guild) ID the bot answers in. Leave empty to answer in every server it is invited to.",
+      "requiredAtBoot": false
+    }
+  ]
 }
