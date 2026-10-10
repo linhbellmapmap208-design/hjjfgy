@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLM-4-9B Chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #1a1a2e;
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+        #status {
+            font-size: 13px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: #2a2a4a;
+            color: #aaa;
+        }
+        #status.ready { background: #1a4a2a; color: #6f6; }
+        #status.loading { background: #2a2a4a; color: #aa6; }
+        #status.error { background: #4a1a1a; color: #f66; }
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .msg {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .msg.user {
+            align-self: flex-end;
+            background: #4a3f8f;
+            color: #fff;
+        }
+        .msg.assistant {
+            align-self: flex-start;
+            background: #1e1e36;
+            color: #d0d0d0;
+        }
+        .msg.loading-dots {
+            align-self: flex-start;
+            background: #1e1e36;
+            color: #888;
+        }
+        .msg.loading-dots::after {
+            content: '...';
+            animation: blink 1.2s infinite;
+        }
+        @keyframes blink { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+        #input-area {
+            padding: 16px 24px;
+            background: #1a1a2e;
+            border-top: 1px solid #2a2a4a;
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        #message-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: #0f0f1a;
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 15px;
+            outline: none;
+        }
+        #message-input:focus { border-color: #4a3f8f; }
+        #message-input::placeholder { color: #555; }
+        #send-button {
+            padding: 12px 24px;
+            background: #4a3f8f;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        #send-button:hover { background: #5a4f9f; }
+        #send-button:disabled { background: #333; color: #666; cursor: not-allowed; }
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15,15,26,.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 100;
+        }
+        #overlay.hidden { display: none; }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid #2a2a4a;
+            border-top-color: #4a3f8f;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #overlay p { color: #888; font-size: 15px; text-align: center; max-width: 400px; }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div class="spinner"></div>
+        <p id="overlay-text">Starting up...</p>
+    </div>
+    <header>
+        <h1>GLM-4-9B Chat</h1>
+        <div id="status" class="loading">Loading...</div>
+    </header>
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type a message..." disabled>
+        <button id="send-button" disabled>Send</button>
+    </div>
+    <script>
+        const messagesEl = document.getElementById('messages');
+        const inputEl = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-button');
+        const statusEl = document.getElementById('status');
+        const overlay = document.getElementById('overlay');
+        const overlayText = document.getElementById('overlay-text');
+        let history = [];
+        let polling = true;
+
+        function addMsg(role, text) {
+            const div = document.createElement('div');
+            div.className = 'msg ' + role;
+            div.textContent = text;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return div;
+        }
+
+        async function checkHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.status === 'ready') {
+                    polling = false;
+                    overlay.classList.add('hidden');
+                    statusEl.textContent = 'Ready';
+                    statusEl.className = 'ready';
+                    inputEl.disabled = false;
+                    sendBtn.disabled = false;
+                    inputEl.focus();
+                } else if (data.status === 'error') {
+                    polling = false;
+                    overlayText.textContent = 'Error: ' + data.message;
+                    statusEl.textContent = 'Error';
+                    statusEl.className = 'error';
+                } else {
+                    overlayText.textContent = data.message || 'Loading...';
+                    statusEl.textContent = 'Loading...';
+                    statusEl.className = 'loading';
+                }
+            } catch (e) {}
+        }
+
+        async function pollHealth() {
+            while (polling) {
+                await checkHealth();
+                if (polling) await new Promise(r => setTimeout(r, 2000));
+            }
+        }
+
+        pollHealth();
+
+        async function sendMessage() {
+            const text = inputEl.value.trim();
+            if (!text) return;
+            inputEl.value = '';
+            sendBtn.disabled = true;
+            inputEl.disabled = true;
+
+            addMsg('user', text);
+            const loadingEl = addMsg('loading-dots', '');
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, history: history }),
+                });
+                const data = await res.json();
+                loadingEl.remove();
+                if (res.ok) {
+                    addMsg('assistant', data.response);
+                    history.push({ role: 'user', content: text });
+                    history.push({ role: 'assistant', content: data.response });
+                } else {
+                    addMsg('assistant', 'Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                loadingEl.remove();
+                addMsg('assistant', 'Error: ' + e.message);
+            }
+
+            sendBtn.disabled = false;
+            inputEl.disabled = false;
+            inputEl.focus();
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

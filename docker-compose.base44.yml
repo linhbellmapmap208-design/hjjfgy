@@ -1,0 +1,23 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.base44
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - hf-cache:/root/.cache/huggingface
+    environment:
+      - BASE44_PREVIEW_MODE
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000", "--reload"]
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 600s
+
+volumes:
+  hf-cache:
