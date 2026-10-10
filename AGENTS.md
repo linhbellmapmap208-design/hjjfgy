@@ -21,6 +21,7 @@ docker compose -f docker-compose.base44.yml up -d --build
 - The web app pulls the model in a **background thread** (`load_model` in `app.py`); `/health` reports `loading` / `ready` / `error` and the UI shows download progress. `discord_bot.py` also calls `llm.ensure_model()` on login, so whichever starts first downloads it once (they share the same volume).
 - The model needs roughly 4 GB RAM for inference; CPU-only inference is slow, so replies take a while (~5-15 s, longer for images).
 - **CPU speed settings:** `OLLAMA_NUM_PARALLEL=1` (a single request gets all 4 cores instead of splitting threads across parallel slots), `OLLAMA_KEEP_ALIVE=-1` (keeps the model loaded so later replies skip the load), and `LLM_NUM_THREADS=4` → passed as Ollama's `num_thread` option in `llm.py`. Do not add a CPU quota to the `ollama` service or it can no longer use all 4 cores.
+- Discord's edge blocks requests that use Python's default `urllib` user agent (`403 error code: 1010`). The `bot` healthcheck therefore sends a `User-Agent` header — any probe of the Discord REST API from Python must do the same.
 - **Discord needs "Message Content Intent" turned ON** (Developer Portal → your app → Bot → Privileged Gateway Intents). Without it Discord refuses the gateway connection — the bot logs the exact hint and exits instead of crash-looping.
 - The `bot` service reads its credentials from the platform-managed env file `/run/base44/app.env` (last `env_file` entry; no secrets are ever written into the repo or compose `environment:`).
 

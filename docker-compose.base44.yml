@@ -68,11 +68,11 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - python -c "import os,urllib.request; t=os.environ.get('DISCORD_BOT_TOKEN','').strip(); assert t, 'missing token'; req=urllib.request.Request('https://discord.com/api/v10/users/@me'); req.add_header('Authorization','Bot '+t); urllib.request.urlopen(req, timeout=10)" || exit 1
-      interval: 60s
+        - python -c "import os,urllib.request; t=os.environ.get('DISCORD_BOT_TOKEN','').strip(); assert t, 'missing token'; req=urllib.request.Request('https://discord.com/api/v10/users/@me'); req.add_header('Authorization','Bot '+t); req.add_header('User-Agent','DiscordBot (base44, 1.0)'); urllib.request.urlopen(req, timeout=10)" || exit 1
+      interval: 30s
       timeout: 15s
-      retries: 3
-      start_period: 120s
+      retries: 5
+      start_period: 45s
 
 volumes:
   ollama-models:
