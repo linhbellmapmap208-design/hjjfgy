@@ -10,6 +10,9 @@ services:
       - hf-cache:/root/.cache/huggingface
     environment:
       - BASE44_PREVIEW_MODE
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+    env_file:
+      - /run/base44/app.env
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000", "--reload"]
     restart: on-failure
     healthcheck:

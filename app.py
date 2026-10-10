@@ -9,6 +9,11 @@ app = FastAPI()
 REPO_ID = "legraphista/glm-4-9b-chat-IMat-GGUF"
 FILENAME = "glm-4-9b-chat.IQ4_XS.gguf"
 
+SYSTEM_PROMPT = (
+    "Bạn là một trợ lý AI hữu ích, thân thiện. "
+    "Luôn trả lời bằng tiếng Việt một cách tự nhiên, rõ ràng."
+)
+
 llm = None
 model_status = "loading"
 status_message = "Starting..."
@@ -41,8 +46,13 @@ def load_model():
 
 @app.on_event("startup")
 async def startup_event():
+    # Khởi động model loading trong background
     thread = threading.Thread(target=load_model, daemon=True)
     thread.start()
+    # Khởi động Discord bot trong background
+    from discord_bot import start_bot
+    bot_thread = threading.Thread(target=start_bot, daemon=True)
+    bot_thread.start()
 
 
 @app.get("/health")
@@ -68,7 +78,7 @@ async def chat(request: ChatRequest):
             status_code=503,
         )
 
-    messages = [{"role": "system", "content": "You are a helpful assistant."}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for h in request.history:
         messages.append({"role": h.role, "content": h.content})
     messages.append({"role": "user", "content": request.message})
